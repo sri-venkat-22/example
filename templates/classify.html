@@ -7,38 +7,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classification Result</title>
+    <title>Batch Classification Results</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: center; }
-        h1 { color: #333; }
-        .result { margin-top: 20px; padding: 15px; border-radius: 6px; }
-        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        strong { color: #007bff; }
-        a { color: #007bff; text-decoration: none; margin-top: 20px; display: inline-block; padding: 10px 15px; border: 1px solid #007bff; border-radius: 4px; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; color: #333; font-weight: bold; }
+        .success-row { background-color: #d4edda; }
+        .error-row { background-color: #f8d7da; }
+        .status-success { color: #155724; font-weight: bold; }
+        .status-error { color: #721c24; font-weight: bold; }
+        .status-na { color: #666; }
+        a { color: #007bff; text-decoration: none; margin-top: 20px; display: inline-block; padding: 10px 15px; border: 1px solid #007bff; border-radius: 4px; transition: background-color 0.3s; }
         a:hover { background-color: #007bff; color: white; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Classification Result</h1>
-        
-        {% if error %}
-        <div class="result error">
-            <p><strong>File:</strong> {{ filename }}</p>
-            <p>{{ error }}</p>
-        </div>
-        {% elif category %}
-        <div class="result success">
-            <p>The document <strong>{{ filename }}</strong> has been classified as:</p>
-            <h2>{{ category }}</h2>
-        </div>
+        <h1>Batch Classification Results</h1>
+
+        {% if results %}
+        <p>Processed {{ results | length }} document(s).</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>Predicted Category</th>
+                    <th>Status</th>
+                    <th>Result / Final Directory</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr class="{% if result.status == 'Success' %}success-row{% else %}error-row{% endif %}">
+                    <td>{{ result.filename }}</td>
+                    <td class="{% if result.category != 'N/A' %}status-success{% else %}status-na{% endif %}">{{ result.category }}</td>
+                    <td class="status-{{ result.status | lower }}">{{ result.status }}</td>
+                    <td>{{ result.message }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-        <p>No result available.</p>
+        <p>No files were processed or a general error occurred.</p>
         {% endif %}
 
-        <a href="{{ url_for('home') }}">Upload Another Document</a>
+        <a href="{{ url_for('home') }}">Upload New Documents</a>
     </div>
 </body>
 </html></title>

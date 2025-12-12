@@ -13,6 +13,7 @@
         .container { max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
         h1 { color: #333; text-align: center; }
         form { display: flex; flex-direction: column; gap: 20px; }
+        /* Changed input type file styling */
         input[type="file"] { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
         input[type="submit"] { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; }
         input[type="submit"]:hover { background-color: #0056b3; }
@@ -21,11 +22,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>Document Category Classifier</h1>
-        <p class="note">Upload a **PDF (.pdf)** file to classify it into one of the trained categories (Taxes, Agreements, Deeds, Valuations, Human Resources).</p>
+        <h1>Batch Document Classifier</h1>
+        <p class="note">Upload one or more **PDF (.pdf)** files. They will be classified and automatically routed to the correct folder (Taxes, Agreements, Deeds, etc.) within your `RawData` directory.</p>
         <form method="POST" action="{{ url_for('classify_document') }}" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".pdf" required>
-            <input type="submit" value="Classify Document">
+            <input type="file" name="files" accept=".pdf" multiple required>
+            <input type="submit" value="Classify and Route Documents">
         </form>
     </div>
 </body>

@@ -39,6 +39,7 @@ os.makedirs(TEMP_UPLOAD_FOLDER, exist_ok=True)
 
 # 3. Define the directory map for routing the files
 CATEGORY_DIR_MAP = {
+    # Keys must match the exact labels output by label_encoder.inverse_transform()
     'Taxes': os.path.join(BASE_DATA_DIR, 'Taxes'),
     'Agreement': os.path.join(BASE_DATA_DIR, 'Agreements'),
     'Deeds': os.path.join(BASE_DATA_DIR, 'Deeds'),
@@ -57,12 +58,10 @@ classifier = None
 
 # Load the trained model components
 try:
-    # Assuming pickle files are in the same directory as app.py
     vectorizer = pickle.load(open('tfidf.pkl', 'rb'))
     label_encoder = pickle.load(open('label_encoder.pkl', 'rb'))
     classifier = pickle.load(open('nbmodel.pkl', 'rb'))
 
-    # We must know the exact string labels the model returns for routing (e.g., 'Taxes', not 'Taxes ')
     CLASSIFICATION_LABELS = label_encoder.classes_.tolist()
 
     print("ML components loaded successfully.")
@@ -130,77 +129,79 @@ def home():
 
 @app.route('/classify', methods=['POST'])
 def classify_document():
-    """Handles file upload, classifies the document, and moves it to the corresponding directory. """
+    """Handles multiple file uploads, classifies each document, and moves it to the corresponding directory. """
     if classifier is None:
         return "Error: ML components not loaded. Check server console for details.", 500
 
-    if 'file' not in request.files:
-        return redirect(request.url)
+    # Get the list of uploaded files using getlist
+    uploaded_files = request.files.getlist('files')
 
-    file = request.files['file']
+    # Check if any valid files were uploaded
+    if not uploaded_files or uploaded_files[0].filename == '':
+        return redirect(url_for('home'))
 
-    if file.filename == '':
-        return redirect(request.url)
+    results = []
 
-    if file:
-        filename = file.filename
+    for file in uploaded_files:
+        if file.filename:
+            filename = file.filename
+            temp_filepath = os.path.join(app.config['TEMP_UPLOAD_FOLDER'], filename)
 
-        # 1. Save file to temporary location for processing
-        temp_filepath = os.path.join(app.config['TEMP_UPLOAD_FOLDER'], filename)
+            # Default result for cleanup/error handling
+            result = {
+                'filename': filename,
+                'category': 'N/A',
+                'status': 'Error',
+                'message': 'Processing failed.'
+            }
 
-        try:
-            file.save(temp_filepath)
+            try:
+                # 1. Save file to temporary location
+                file.save(temp_filepath)
 
-            # 2. Extract Text
-            raw_text = convert_pdf_to_txt(temp_filepath)
+                # 2. Extract, Preprocess, and Vectorize Text
+                raw_text = convert_pdf_to_txt(temp_filepath)
 
-            if not raw_text.strip():
-                return render_template('classify.html',
-                                       filename=filename,
-                                       error="Could not extract text from the PDF. File might be image-based or corrupted.")
+                if not raw_text.strip():
+                    result['message'] = "Text extraction failed (file might be image-based or empty)."
+                    raise Exception("Extraction failure")
 
-            # 3. Preprocess and Vectorize Text
-            processed_text = preprocess_text(raw_text)
-            input_vector = vectorizer.transform(pd.Series([processed_text]))
+                processed_text = preprocess_text(raw_text)
+                input_vector = vectorizer.transform(pd.Series([processed_text]))
 
-            # 4. Predict Category
-            prediction_index = classifier.predict(input_vector.toarray())
-            predicted_category = label_encoder.inverse_transform(prediction_index)[0]
+                # 3. Predict Category
+                prediction_index = classifier.predict(input_vector.toarray())
+                predicted_category = label_encoder.inverse_transform(prediction_index)[0]
 
-            # 5. Route and Save the File to the Final Destination
+                result['category'] = predicted_category
 
-            # Use the prediction to find the correct destination path
-            # 5. Route and Save the File to the Final Destination
-            destination_dir = CATEGORY_DIR_MAP.get(predicted_category)
+                # 4. Route and Save the File to the Final Destination
+                destination_dir = CATEGORY_DIR_MAP.get(predicted_category)
 
-            if destination_dir:
-                final_filepath = os.path.join(destination_dir, filename)
+                if destination_dir:
+                    final_filepath = os.path.join(destination_dir, filename)
 
-                # Move the file from the temporary location to the final classified directory
-                shutil.move(temp_filepath, final_filepath)  # <--- THIS IS THE MOVE ACTION
+                    # Move the file
+                    shutil.move(temp_filepath, final_filepath)
 
-                # Success message including the file's final location
-                result_message = f"Successfully moved to: {destination_dir}"
-            else:
-                # Should not happen if CATEGORY_DIR_MAP is complete, but good for safety
-                result_message = f"Classification successful, but failed to find routing path for category: {predicted_category}"
+                    result['status'] = 'Success'
+                    result['message'] = f"Moved to: {os.path.basename(destination_dir)}"
+                else:
+                    result['message'] = f"Classification: {predicted_category}, but routing path is undefined."
 
-            return render_template('classify.html',
-                                   filename=filename,
-                                   category=predicted_category,
-                                   message=result_message)
+            except Exception as e:
+                # Catch any error, ensure message is logged, and clean up
+                if result['message'] == 'Processing failed.':
+                    result['message'] = f"Error: {e}"
 
-        except Exception as e:
-            # Handle any exceptions during the process (e.g., file move error, model error)
-            return render_template('classify.html',
-                                   filename=filename,
-                                   error=f"An unexpected error occurred: {e}")
-        finally:
-            # Clean up the file from the temporary folder if it still exists (e.g., if the move failed)
+            results.append(result)
+
+            # Cleanup: Ensure the file is deleted from temp, even if an error occurred during move
             if os.path.exists(temp_filepath):
                 os.remove(temp_filepath)
 
-    return redirect(url_for('home'))
+                # Return the aggregated results to the classification template
+    return render_template('classify.html', results=results)
 
 
 if __name__ == '__main__':
