@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Classifier</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; text-align: center; }
+        form { display: flex; flex-direction: column; gap: 20px; }
+        input[type="file"] { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="submit"] { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; }
+        input[type="submit"]:hover { background-color: #0056b3; }
+        .note { color: #666; font-size: 0.9em; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Document Category Classifier</h1>
+        <p class="note">Upload a **PDF (.pdf)** file to classify it into one of the trained categories (Taxes, Agreements, Deeds, Valuations, Human Resources).</p>
+        <form method="POST" action="{{ url_for('classify_document') }}" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".pdf" required>
+            <input type="submit" value="Classify Document">
+        </form>
+    </div>
+</body>
+</html></title>
+</head>
+<body>
+
+</body>
+</html>
